@@ -9,7 +9,7 @@ __author__ = 'Romain Tavenard romain.tavenard[at]univ-rennes2.fr'
 numpy.random.seed(0)
 
 doc, n_words, n_t = read_doc_from_json("sample_data/simple_doc.json")
-model = HDLSM(motif_length=5, n_words=n_words, alpha=0.1, eta=0.1, gamma=0.1)
+model = HDLSM(motif_length=5, n_words=n_words, alpha=0.1, eta=0.1, gamma=0.1, n_iter=500)
 model.fit([doc])
 print(model.wo[0])
 

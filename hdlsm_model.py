@@ -149,7 +149,15 @@ class HierarchicalDirichletLatentSemanticMotifs:
             for _i in range(self.wo[d].shape[0]):
                 if self.wo[d][_i] > old_wo_di:
                     self.wo[d][_i] -= 1
-        # TODO: motif remapping
+        # Motif remapping
+        if old_m is not None and not self._exists_motif(old_m):
+            del self.n_occ_m_[old_m]
+            del self.n_obs_m_[old_m]
+            del self.n_obs_wtm_[old_m]
+            for _d in range(len(self.docs_)):
+                for _o in range(len(self.om[_d])):
+                    if self.om[d][_o] > old_m:
+                        self.om[d][_o] -= 1
 
     def _update_n_obs(self, d, i, o):
         m = self.om[d][o]
@@ -169,6 +177,9 @@ class HierarchicalDirichletLatentSemanticMotifs:
             if _o == o:
                 return True
         return False
+
+    def _exists_motif(self, m):
+        return self.n_occ_m_[m] > 0
 
     def __init_from_data(self, docs):
         self.wo = [numpy.zeros((doc_d.shape[0], ), dtype=numpy.int) - 1 for doc_d in docs]

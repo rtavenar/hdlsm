@@ -36,6 +36,13 @@ class HierarchicalDirichletLatentSemanticMotifs:
                 n_motifs_ = max(n_motifs_, numpy.max(self.om[d]) + 1)
         return n_motifs_
 
+    def p_wt_m(self, m):
+        p_wt = numpy.zeros((self.n_words, self.motif_length))
+        for w in range(self.n_words):
+            for rt in range(self.motif_length):
+                p_wt[w, rt] = (self._n_obs_wtm(w, rt, m) + self.eta) / (self._sum_wt_n_obs_wtm(m) + self.n_words * self.motif_length * self.eta)
+        return p_wt
+
     def fit(self, docs):
         """Fitting the model to observations found in docs.
 
@@ -123,13 +130,13 @@ class HierarchicalDirichletLatentSemanticMotifs:
                     n_obs += 1
         return n_obs
 
-    def _n_occ(self):
+    def _n_occ(self):  # TODO: deal with dead occurrences
         n_occ = 0
         for d in range(self.n_docs):
             n_occ += len(self.om[d])
         return n_occ
 
-    def _n_occ_m(self, m):
+    def _n_occ_m(self, m):  # TODO: deal with dead occurrences
         n_occ_m = 0
         for d in range(self.n_docs):
             for _m in self.om[d]:

@@ -130,13 +130,13 @@ class HierarchicalDirichletLatentSemanticMotifs:
                     n_obs += 1
         return n_obs
 
-    def _n_occ(self):  # TODO: deal with dead occurrences
+    def _n_occ(self):
         n_occ = 0
         for d in range(self.n_docs):
             n_occ += len(self.om[d])
         return n_occ
 
-    def _n_occ_m(self, m):  # TODO: deal with dead occurrences
+    def _n_occ_m(self, m):
         n_occ_m = 0
         for d in range(self.n_docs):
             for _m in self.om[d]:
@@ -152,8 +152,12 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
     def _change_occurrence(self, d, i, old_wo_di, new_wo_di):
         self.wo[d][i] = new_wo_di
-        if not self._exists_occurrence(d, old_wo_di):
-            pass  # TODO: should include index remapping if the occurrence disappears
+        if old_wo_di >= 0 and not self._exists_occurrence(d, old_wo_di):
+            del self.om[d][old_wo_di]
+            del self.ost[d][old_wo_di]
+            for _i in range(self.wo[d].shape[0]):
+                if self.wo[d][_i] > old_wo_di:
+                    self.wo[d][_i] -= 1
 
     def _exists_occurrence(self, d, o):
         for _o in self.wo[d]:

@@ -9,7 +9,7 @@ __author__ = 'Romain Tavenard romain.tavenard[at]univ-rennes2.fr'
 # o denotes a motif occurrence in a document
 
 class HierarchicalDirichletLatentSemanticMotifs:
-    def __init__(self, motif_length, n_words, alpha, eta, gamma, niter=100):
+    def __init__(self, motif_length, n_words, alpha, eta, gamma, n_iter=100):
         self.wo = []  # d, i -> o
         self.om = []  # d, o -> m
         self.ost = []  # d, o -> st
@@ -21,7 +21,7 @@ class HierarchicalDirichletLatentSemanticMotifs:
         self.eta = eta
         self.gamma = gamma
 
-        self.niter = niter
+        self.n_iter = n_iter
 
         self.docs_ = None
 
@@ -39,12 +39,17 @@ class HierarchicalDirichletLatentSemanticMotifs:
     def n_motifs(self):
         return len(self.n_occ_m_)
 
+    # Short names for n_words and motif_length
+    @property
+    def n_t(self):
+        return self.motif_length
+
+    @property
+    def n_w(self):
+        return self.n_words
+
     def p_wt_m(self, m):
-        p_wt = numpy.zeros((self.n_words, self.motif_length))
-        for w in range(self.n_words):
-            for rt in range(self.motif_length):
-                p_wt[w, rt] = (self.n_obs_wtm_[m][w, rt] + self.eta) / (self.n_obs_m_[m] + self.n_words * self.motif_length * self.eta)
-        return p_wt
+        return (self.n_obs_wtm_[m] + self.eta) / (self.n_obs_m_[m] + self.n_w * self.n_t * self.eta)
 
     def fit(self, docs):
         """Fitting the model to observations found in docs.
@@ -54,7 +59,7 @@ class HierarchicalDirichletLatentSemanticMotifs:
         docs[d][:, 1] contains timestamps.
         """
         self.__init_from_data(docs)
-        for _ in range(self.niter):
+        for _ in range(self.n_iter):
             self._fit_one_iter(docs)
         return self
 
@@ -74,10 +79,10 @@ class HierarchicalDirichletLatentSemanticMotifs:
                 # Existing occurrence case
                 for o in range(n_occ_d):
                     rt_di = t_di - self.ost[d][o]
-                    if 0 <= rt_di < self.motif_length:
+                    if 0 <= rt_di < self.n_t:
                         m_di = self.om[d][o]
                         # Using Eq. 10 from supp material (cf pdf)
-                        p_wt = (self.n_obs_wtm_[m_di][w_di, rt_di] + self.eta) / (self.n_obs_m_[m_di] + self.n_words * self.motif_length * self.eta)  # Assumes uniform prior
+                        p_wt = (self.n_obs_wtm_[m_di][w_di, rt_di] + self.eta) / (self.n_obs_m_[m_di] + self.n_w * self.n_t * self.eta)  # Assumes uniform prior
                         # Using Eq. 11 from supp material (cf pdf)
                         p_o = self._n_obs_do(d, o) / (n_obs_d - 1 + self.alpha)
                         probas[o] = p_wt * p_o
@@ -86,7 +91,7 @@ class HierarchicalDirichletLatentSemanticMotifs:
                 denom_gamma = self.n_occ_ + self.gamma  # Denom in Eq 15
                 p_o = self.alpha / (n_obs_d - 1 + self.alpha)
                 for m in range(self.n_motifs):
-                    p_wt = (self.n_obs_wm_(w_di, m) + self.eta) / (self.n_obs_m_[m] + self.eta * self.n_words * self.motif_length)  # Eq 16
+                    p_wt = (self.n_obs_wm_(w_di, m) + self.eta) / (self.n_obs_m_[m] + self.eta * self.n_w * self.n_t)  # Eq 16
                     p_k = self.n_occ_m_[m] / denom_gamma  # Eq 15
                     probas_motif[m] = p_k * p_wt / n_ts_d  # Eq 14
                 # New occurrence, new motif case
@@ -95,7 +100,7 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
                 draw = numpy.random.multinomial(1, pvals=probas / numpy.sum(probas))
                 new_wo_di = numpy.argmax(draw)
-                if new_wo_di == n_occ_d:
+                if new_wo_di == n_occ_d:  # New occurrence drawn
                     self.ost[d].append(t_di - numpy.random.randint(self.motif_length))
                     draw = numpy.random.multinomial(1, pvals=probas_motif / numpy.sum(probas_motif))
                     m = numpy.argmax(draw)
@@ -125,7 +130,7 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
     def _change_occurrence(self, d, i, old_wo_di, new_wo_di):
         self.wo[d][i] = new_wo_di
-        # Update n_obs (only update for new affectation as previous one was already cancelled in _cancel_obs)
+        # Update n_obs (only update for new affectation as previous one was already removed in _cancel_obs)
         self._update_n_obs(d, i, new_wo_di)
 
         if old_wo_di == new_wo_di:

@@ -20,7 +20,7 @@ for m in range(model.n_motifs()):
         motif = model.p_wt_m(m)
 
         pylab.figure(figsize=(model.motif_length, model.n_words))
-        pylab.imshow(motif, interpolation="none", cmap="gray_r")
+        pylab.imshow(motif, vmin=0., interpolation="none", cmap="gray_r")
         pylab.ylabel("Word index")
         pylab.xlabel("Relative time")
         pylab.savefig("output/simple_doc_motif%d.png" % m)

@@ -13,7 +13,7 @@ model = HDLSM(motif_length=5, n_words=n_words, alpha=0.1, eta=0.1, gamma=0.1)
 model.fit([doc])
 print(model.wo[0])
 
-for m in range(model.n_motifs()):
+for m in range(model.n_motifs):
     n_occ = model.n_occ_m_[m]
     print("Motif %d: %d occurrences" % (m, n_occ))
     if n_occ > 0:

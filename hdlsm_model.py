@@ -25,16 +25,15 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
         self.docs_ = None
 
+        self.n_occ_ = 0
+        self.n_occ_m_ = []
+
     @property
     def n_docs(self):
         return len(self.wo)
 
     def n_motifs(self):
-        n_motifs_ = 0
-        for d in range(self.n_docs):
-            if len(self.om[d]) > 0:
-                n_motifs_ = max(n_motifs_, numpy.max(self.om[d]) + 1)
-        return n_motifs_
+        return len(self.n_occ_m_)
 
     def p_wt_m(self, m):
         p_wt = numpy.zeros((self.n_words, self.motif_length))
@@ -53,8 +52,6 @@ class HierarchicalDirichletLatentSemanticMotifs:
         self.__init_from_data(docs)
         for _ in range(self.niter):
             self._fit_one_iter(docs)
-            #print(self.wo[0])
-            #print(self.om[0])
         return self
 
     def _fit_one_iter(self, docs):
@@ -82,11 +79,11 @@ class HierarchicalDirichletLatentSemanticMotifs:
                         probas[o] = p_wt * p_o
                 # New occurrence case
                 probas_motif = numpy.zeros((self.n_motifs() + 1, ))
-                denom_gamma = self._n_occ() + self.gamma  # Denom in Eq 15
+                denom_gamma = self.n_occ_ + self.gamma  # Denom in Eq 15
                 p_o = self.alpha / (n_obs_d - 1 + self.alpha)
                 for m in range(self.n_motifs()):
                     p_wt = (self._sum_t_n_obs_wtm(w_di, m) + self.eta) / (self._sum_wt_n_obs_wtm(m) + self.eta * self.n_words * self.motif_length)  # Eq 16
-                    p_k = self._n_occ_m(m) / denom_gamma  # Eq 15
+                    p_k = self.n_occ_m_[m] / denom_gamma  # Eq 15
                     probas_motif[m] = p_k * p_wt / n_ts_d  # Eq 14
                 # New occurrence, new motif case
                 probas_motif[-1] = self.gamma / (denom_gamma * self.n_words * n_ts_d)  # p_o factor is given afterwards
@@ -94,11 +91,16 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
                 draw = numpy.random.multinomial(1, pvals=probas / numpy.sum(probas))
                 new_wo_di = numpy.argmax(draw)
-                #print(probas / numpy.sum(probas), draw, new_wo_di)
                 if new_wo_di == n_occ_d:
                     self.ost[d].append(t_di - numpy.random.randint(self.motif_length))
                     draw = numpy.random.multinomial(1, pvals=probas_motif / numpy.sum(probas_motif))
-                    self.om[d].append(numpy.argmax(draw))
+                    m = numpy.argmax(draw)
+                    self.om[d].append(m)
+                    self.n_occ_ += 1
+                    if m < self.n_motifs():
+                        self.n_occ_m_[m] += 1
+                    else:
+                        self.n_occ_m_.append(1)  # Creating a new motif with a single occurrence
                 self._change_occurrence(d, i, old_wo_di, new_wo_di)
 
     def _n_obs_wtm(self, w, rt, m):
@@ -130,20 +132,6 @@ class HierarchicalDirichletLatentSemanticMotifs:
                     n_obs += 1
         return n_obs
 
-    def _n_occ(self):
-        n_occ = 0
-        for d in range(self.n_docs):
-            n_occ += len(self.om[d])
-        return n_occ
-
-    def _n_occ_m(self, m):
-        n_occ_m = 0
-        for d in range(self.n_docs):
-            for _m in self.om[d]:
-                if _m == m:
-                    n_occ_m += 1
-        return n_occ_m
-
     def _n_obs_do(self, d, o):
         return numpy.sum(self.wo[d] == o)
 
@@ -152,12 +140,16 @@ class HierarchicalDirichletLatentSemanticMotifs:
 
     def _change_occurrence(self, d, i, old_wo_di, new_wo_di):
         self.wo[d][i] = new_wo_di
+        # Occurrence remapping
         if old_wo_di >= 0 and not self._exists_occurrence(d, old_wo_di):
+            self.n_occ_ -= 1
+            self.n_occ_m_[self.om[d][old_wo_di]] -= 1
             del self.om[d][old_wo_di]
             del self.ost[d][old_wo_di]
             for _i in range(self.wo[d].shape[0]):
                 if self.wo[d][_i] > old_wo_di:
                     self.wo[d][_i] -= 1
+        # TODO: motif remapping
 
     def _exists_occurrence(self, d, o):
         for _o in self.wo[d]:
@@ -170,3 +162,6 @@ class HierarchicalDirichletLatentSemanticMotifs:
         self.om = [[] for doc_d in docs]
         self.ost = [[] for doc_d in docs]
         self.docs_ = docs
+
+        self.n_occ_ = 0
+        self.n_occ_m_ = []

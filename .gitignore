@@ -97,3 +97,5 @@ ENV/
 
 # Project_specific
 output/
+.idea/
+sample_data/Ascension_032017/

@@ -16,7 +16,22 @@ def read_doc_from_json(fname):
     return npy_doc, n_words, n_t
 
 
-def load_trajectories(path):
+def load_trajectories(path, target_type=None):
+    """Load trajectories as separate documents.
+
+    Each generated document is a dictionary having two keys:
+    - "SHIP_TYPE" gives information about the type of the ship associated to the trajectory
+    - "TRAJECTORY" is a list of dictionnaries providing, for each AIS position in the trajectory, longitude, latitude
+      and UNIX timestamp.
+
+    Parameters
+    ----------
+    path : str
+        preffix of shapefile names (e.g. "Ascension_032017/Ascension_2017_month3_AIS") from which two shapefiles will
+        be considered: path + "_pos" and path + "_track".
+    target_type : str or None, default: None
+        Ship type to restrict the selection to. If None, all ship types are considered.
+    """
     path_pos = path + "_pos"
     path_track = path + "_track"
 
@@ -33,12 +48,24 @@ def load_trajectories(path):
     idx_start = 0
     for idx_shape, shprec in enumerate(sf_track.shapeRecords()):
         sz_traj = len(shprec.shape.points)
-        docs.append({"SHIP_TYPE": shprec.record[idx_ship_type],
-                     "TRAJECTORY": [{"lon": lon, "lat": lat, "t": pos[idx_timestamp]}
-                                    for (lon, lat), pos in zip(shprec.shape.points,
-                                                               positions[idx_start:idx_start+sz_traj])]})
+        if target_type is None or target_type == shprec.record[idx_ship_type]:
+            docs.append({"SHIP_TYPE": shprec.record[idx_ship_type],
+                         "TRAJECTORY": [{"lon": lon, "lat": lat, "t": pos[idx_timestamp]}
+                                        for (lon, lat), pos in zip(shprec.shape.points,
+                                                                   positions[idx_start:idx_start + sz_traj])]})
         idx_start += sz_traj
     return docs
+
+
+def traj_bbox(docs_ais):
+    min_lon, max_lon, min_lat, max_lat = numpy.inf, -numpy.inf, numpy.inf, -numpy.inf
+    for d in docs_ais:
+        for p in d["TRAJECTORY"]:
+            min_lon = min(min_lon, p["lon"])
+            max_lon = max(max_lon, p["lon"])
+            min_lat = min(min_lat, p["lat"])
+            max_lat = max(max_lat, p["lat"])
+    return min_lon, max_lon, min_lat, max_lat
 
 
 if __name__ == "__main__":
@@ -48,6 +75,8 @@ if __name__ == "__main__":
 
     print("---")
 
-    docs_ais = load_trajectories("sample_data/Ascension_032017/Ascension_2017_month3_AIS")
+    docs_ais = load_trajectories("sample_data/Ascension_032017/Ascension_2017_month3_AIS", target_type="Fishing")
+    print(set([d["SHIP_TYPE"] for d in docs_ais]))
     print(len(docs_ais))
+    print(traj_bbox(docs_ais))
 

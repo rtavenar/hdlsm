@@ -58,14 +58,32 @@ def load_trajectories(path, target_type=None):
 
 
 def traj_bbox(docs_ais):
-    min_lon, max_lon, min_lat, max_lat = numpy.inf, -numpy.inf, numpy.inf, -numpy.inf
+    min_lon, max_lon, min_lat, max_lat, min_t, max_t = [numpy.inf, -numpy.inf] * 3
     for d in docs_ais:
         for p in d["TRAJECTORY"]:
             min_lon = min(min_lon, p["lon"])
             max_lon = max(max_lon, p["lon"])
             min_lat = min(min_lat, p["lat"])
             max_lat = max(max_lat, p["lat"])
-    return min_lon, max_lon, min_lat, max_lat
+            min_t = min(min_t, p["t"])
+            max_t = max(max_t, p["t"])
+    return min_lon, max_lon, min_lat, max_lat, min_t, max_t
+
+
+def traj_quantize(docs_ais, n_words_lon=210, n_words_lat=200, time_step=10):
+    docs_out = []
+    min_lon, max_lon, min_lat, max_lat, min_t, max_t = traj_bbox(docs_ais)
+    spread_lon = max_lon - min_lon
+    spread_lat = max_lat - min_lat
+    eps = 1e-9  # For max_lat (resp. max_lon) to fall in bin n_words_lat - 1 (resp. n_words_lon - 1)
+    for d in docs_ais:
+        d_out = {"SHIP_TYPE": d["SHIP_TYPE"], "TRAJECTORY": []}
+        for p in d["TRAJECTORY"]:
+            d_out["TRAJECTORY"].append({"lon": int((p["lon"] - min_lon - eps) * n_words_lon / spread_lon),
+                                        "lat": int((p["lat"] - min_lat - eps) * n_words_lat / spread_lat),
+                                        "t": (p["t"] - min_t) // time_step})
+        docs_out.append(d_out)
+    return docs_out
 
 
 if __name__ == "__main__":
@@ -79,4 +97,4 @@ if __name__ == "__main__":
     print(set([d["SHIP_TYPE"] for d in docs_ais]))
     print(len(docs_ais))
     print(traj_bbox(docs_ais))
-
+    print(traj_bbox(traj_quantize(docs_ais)))

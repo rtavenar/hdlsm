@@ -82,7 +82,8 @@ class HierarchicalDirichletLatentSemanticMotifs:
                     if 0 <= rt_di < self.n_t:
                         m_di = self.om[d][o]
                         # Using Eq. 10 from supp material (cf pdf)
-                        p_wt = (self.n_obs_wtm_[m_di][w_di, rt_di] + self.eta) / (self.n_obs_m_[m_di] + self.n_w * self.n_t * self.eta)  # Assumes uniform prior
+                        p_wt = (self.n_obs_wtm_[m_di][w_di, rt_di] + self.eta) / (self.n_obs_m_[m_di] +
+                                                                                  self.n_w * self.n_t * self.eta)  # Assumes uniform prior
                         # Using Eq. 11 from supp material (cf pdf)
                         p_o = self._n_obs_do(d, o) / (n_obs_d - 1 + self.alpha)
                         probas[o] = p_wt * p_o

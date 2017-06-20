@@ -79,11 +79,24 @@ def traj_quantize(docs_ais, n_words_lon=210, n_words_lat=200, time_step=10):
     for d in docs_ais:
         d_out = {"SHIP_TYPE": d["SHIP_TYPE"], "TRAJECTORY": []}
         for p in d["TRAJECTORY"]:
-            d_out["TRAJECTORY"].append({"lon": int((p["lon"] - min_lon - eps) * n_words_lon / spread_lon),
-                                        "lat": int((p["lat"] - min_lat - eps) * n_words_lat / spread_lat),
+            lon_q = int((p["lon"] - min_lon - eps) * n_words_lon / spread_lon)
+            lat_q = int((p["lat"] - min_lat - eps) * n_words_lat / spread_lat)
+            d_out["TRAJECTORY"].append({"w": lon_q + n_words_lon * lat_q,
                                         "t": (p["t"] - min_t) // time_step})
         docs_out.append(d_out)
     return docs_out
+
+
+def mix_trajectories(quantized_docs_ais):
+    n_obs = sum([len(d["TRAJECTORY"]) for d in quantized_docs_ais])
+    final_doc = numpy.empty((n_obs, 2), dtype=numpy.int)
+    i = 0
+    for d in quantized_docs_ais:
+        for p in d["TRAJECTORY"]:
+            final_doc[i, 0] = p["w"]
+            final_doc[i, 1] = p["t"]
+            i += 1
+    return final_doc
 
 
 if __name__ == "__main__":
@@ -97,4 +110,5 @@ if __name__ == "__main__":
     print(set([d["SHIP_TYPE"] for d in docs_ais]))
     print(len(docs_ais))
     print(traj_bbox(docs_ais))
-    print(traj_bbox(traj_quantize(docs_ais)))
+    qdocs = traj_quantize(docs_ais)
+    print(mix_trajectories(qdocs).shape)

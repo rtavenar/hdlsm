@@ -157,8 +157,8 @@ class HierarchicalDirichletLatentSemanticMotifs:
             del self.n_obs_wtm_[old_m]
             for _d in range(len(self.docs_)):
                 for _o in range(len(self.om[_d])):
-                    if self.om[d][_o] > old_m:
-                        self.om[d][_o] -= 1
+                    if self.om[_d][_o] > old_m:
+                        self.om[_d][_o] -= 1
 
     def _update_n_obs(self, d, i, o):
         m = self.om[d][o]
